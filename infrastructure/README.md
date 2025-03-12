@@ -116,4 +116,4 @@ To remove all deployed resources when no longer needed:
 ```bash
 az group delete --name azure-resume-dev-rg --yes
 az group delete --name azure-resume-prod-rg --yes
-```
+```# Testing workflow
