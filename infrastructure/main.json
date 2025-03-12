@@ -22,7 +22,7 @@
         },
         "storageAccountName": {
             "type": "string",
-            "defaultValue": "[concat('resumesa', parameters('environment'), uniqueString(resourceGroup().id))]",
+            "defaultValue": "[concat('sa', parameters('environment'), substring(uniqueString(resourceGroup().id), 0, 13 - length(parameters('environment'))))]",
             "metadata": {
                 "description": "Name of the storage account"
             }
