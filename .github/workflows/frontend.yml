@@ -3,7 +3,7 @@ name: Frontend Deployment
 on:
   push:
     branches:
-      - develop  # Auto-deploy to dev on develop branch changes
+      - dev  # Auto-deploy to dev on develop branch changes
     paths:
       - 'frontend/**'
   pull_request:

@@ -3,7 +3,7 @@ name: Infrastructure Deployment
 on:
   push:
     branches:
-      - develop  # Auto-deploy to dev on develop branch changes
+      - dev  # Auto-deploy to dev on develop branch changes
     paths:
       - 'infrastructure/**'
   pull_request:
