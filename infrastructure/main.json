@@ -78,7 +78,7 @@
     "resources": [
         {
             "type": "Microsoft.Storage/storageAccounts",
-            "apiVersion": "2021-04-01",
+            "apiVersion": "2024-01-01",
             "name": "[parameters('storageAccountName')]",
             "location": "[parameters('location')]",
             "sku": {
@@ -105,7 +105,7 @@
         },
         {
             "type": "Microsoft.Storage/storageAccounts/blobServices",
-            "apiVersion": "2021-04-01",
+            "apiVersion": "2024-01-01",
             "name": "[concat(parameters('storageAccountName'), '/default')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
@@ -134,7 +134,7 @@
         },
         {
             "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
-            "apiVersion": "2021-04-01",
+            "apiVersion": "2024-01-01",
             "name": "[concat(parameters('storageAccountName'), '/default/$web')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]",
@@ -146,7 +146,7 @@
         },
         {
             "type": "Microsoft.DocumentDB/databaseAccounts",
-            "apiVersion": "2021-04-15",
+            "apiVersion": "2024-12-01-preview",
             "name": "[parameters('cosmosDBAccountName')]",
             "location": "[parameters('location')]",
             "kind": "GlobalDocumentDB",
@@ -171,7 +171,7 @@
         },
         {
             "type": "Microsoft.DocumentDB/databaseAccounts/tables",
-            "apiVersion": "2021-04-15",
+            "apiVersion": "2024-12-01-preview",
             "name": "[concat(parameters('cosmosDBAccountName'), '/', variables('tableName'))]",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDBAccountName'))]"
@@ -196,7 +196,7 @@
         },
         {
             "type": "Microsoft.Web/serverfarms",
-            "apiVersion": "2021-02-01",
+            "apiVersion": "2024-04-01",
             "name": "[parameters('appServicePlanName')]",
             "location": "[parameters('location')]",
             "sku": {
@@ -211,7 +211,7 @@
         },
         {
             "type": "Microsoft.Web/sites",
-            "apiVersion": "2021-02-01",
+            "apiVersion": "2024-04-01",
             "name": "[parameters('functionAppName')]",
             "location": "[parameters('location')]",
             "kind": "functionapp",
@@ -275,18 +275,18 @@
         },
         {
             "type": "Microsoft.Cdn/profiles",
-            "apiVersion": "2020-09-01",
+            "apiVersion": "2024-09-01",
             "name": "[parameters('cdnProfileName')]",
-            "location": "[parameters('location')]",
+            "location": "westeurope",
             "sku": {
                 "name": "Standard_Microsoft"
             }
         },
         {
             "type": "Microsoft.Cdn/profiles/endpoints",
-            "apiVersion": "2020-09-01",
+            "apiVersion": "2024-09-01",
             "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'))]",
-            "location": "[parameters('location')]",
+            "location": "westeurope",
             "dependsOn": [
                 "[resourceId('Microsoft.Cdn/profiles', parameters('cdnProfileName'))]",
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
