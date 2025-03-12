@@ -63,7 +63,7 @@ jobs:
             az deployment group validate \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --template-file main.json \
-              --parameters @parameters.prod.json
+              --parameters @parameters.prd.json
       
       - name: What-If Analysis
         uses: azure/CLI@v1
