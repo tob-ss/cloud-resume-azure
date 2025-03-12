@@ -6,11 +6,11 @@
             "type": "string",
             "allowedValues": [
                 "dev",
-                "prod"
+                "prd"
             ],
             "defaultValue": "dev",
             "metadata": {
-                "description": "Environment (dev or prod)"
+                "description": "Environment (dev or prd)"
             }
         },
         "location": {
@@ -22,7 +22,7 @@
         },
         "storageAccountName": {
             "type": "string",
-            "defaultValue": "[concat('sa', parameters('environment'), substring(uniqueString(resourceGroup().id), 0, 13 - length(parameters('environment'))))]",
+            "defaultValue": "[concat('resumesa', parameters('environment'), uniqueString(resourceGroup().id))]",
             "metadata": {
                 "description": "Name of the storage account"
             }
