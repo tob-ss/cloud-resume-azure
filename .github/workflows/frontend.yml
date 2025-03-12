@@ -1,0 +1,158 @@
+name: Frontend Deployment
+
+on:
+  push:
+    branches:
+      - develop  # Auto-deploy to dev on develop branch changes
+    paths:
+      - 'frontend/**'
+  pull_request:
+    branches:
+      - main  # Run tests on PRs to main but don't deploy
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      
+      - name: Install html-validator
+        run: npm install -g html-validator-cli
+      
+      - name: Validate HTML
+        run: html-validator --file frontend/index.html --verbose
+      
+      - name: Validate CSS with Stylelint
+        run: |
+          npm install -g stylelint stylelint-config-standard
+          echo "{ \"extends\": \"stylelint-config-standard\" }" > .stylelintrc.json
+          npx stylelint "frontend/css/*.css"
+  
+  deploy:
+    needs: build-and-test
+    if: success() && (github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Set environment variables
+        id: env-vars
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "prod" || "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+            echo "RESOURCE_GROUP=azure-resume-prod-rg" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "RESOURCE_GROUP=azure-resume-dev-rg" >> $GITHUB_ENV
+          fi
+          echo "Deploying to ${{ env.ENVIRONMENT }} environment in ${{ env.RESOURCE_GROUP }}"
+      
+      - name: Get Storage Account Name
+        id: storage-name
+        run: |
+          STORAGE_ACCOUNT=$(az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs.storageAccountName.value \
+            -o tsv)
+          echo "::set-output name=name::$STORAGE_ACCOUNT"
+          echo "Storage account name: $STORAGE_ACCOUNT"
+      
+      - name: Upload to Azure Blob Storage
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Enable static website hosting if not already enabled
+            az storage blob service-properties update \
+              --account-name ${{ steps.storage-name.outputs.name }} \
+              --static-website \
+              --index-document index.html \
+              --404-document 404.html
+            
+            # Upload files
+            az storage blob upload-batch \
+              --account-name ${{ steps.storage-name.outputs.name }} \
+              --source frontend \
+              --destination '$web' \
+              --overwrite
+      
+      - name: Purge CDN Endpoint
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Get CDN endpoint name
+            CDN_PROFILE=$(az deployment group show \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name main \
+              --query properties.outputs.cdnProfileName.value \
+              -o tsv || echo "")
+            
+            CDN_ENDPOINT=$(az deployment group show \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name main \
+              --query properties.outputs.cdnEndpointName.value \
+              -o tsv || echo "")
+            
+            if [[ -n "$CDN_PROFILE" && -n "$CDN_ENDPOINT" ]]; then
+              echo "Purging CDN endpoint: $CDN_ENDPOINT"
+              az cdn endpoint purge \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --profile-name $CDN_PROFILE \
+                --name $CDN_ENDPOINT \
+                --content-paths '/*'
+            else
+              echo "CDN endpoint not found or not configured."
+            fi
+      
+      - name: Get Website URL
+        id: website-url
+        run: |
+          STATIC_URL=$(az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs.storageStaticWebsiteUrl.value \
+            -o tsv)
+          
+          CDN_URL=$(az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs.cdnEndpointUrl.value \
+            -o tsv || echo "")
+          
+          if [[ -n "$CDN_URL" ]]; then
+            FINAL_URL=$CDN_URL
+          else
+            FINAL_URL=$STATIC_URL
+          fi
+          
+          echo "::set-output name=url::$FINAL_URL"
+          echo "Website URL: $FINAL_URL"
+      
+      - name: Deployment Summary
+        run: |
+          echo "Deployment to ${{ env.ENVIRONMENT }} environment completed successfully."
+          echo "Website URL: ${{ steps.website-url.outputs.url }}"

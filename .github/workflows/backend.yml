@@ -1,0 +1,170 @@
+name: Backend Deployment
+
+on:
+  push:
+    branches:
+      - dev  # Auto-deploy to dev on develop branch changes
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches:
+      - main  # Run tests on PRs to main but don't deploy
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-mock
+          pip install -r backend/requirements.txt
+      
+      - name: Run unit tests
+        run: |
+          cd backend
+          python -m pytest tests/ -v
+  
+  deploy:
+    needs: test
+    if: success() && (github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install azure-functions-core-tools@4 --upgrade
+      
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Set environment variables
+        id: env-vars
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "prod" || "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+            echo "RESOURCE_GROUP=azure-resume-prod-rg" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "RESOURCE_GROUP=azure-resume-dev-rg" >> $GITHUB_ENV
+          fi
+          echo "Deploying to ${{ env.ENVIRONMENT }} environment in ${{ env.RESOURCE_GROUP }}"
+      
+      - name: Get Function App Name
+        id: function-app
+        run: |
+          FUNCTION_APP=$(az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs.functionAppName.value \
+            -o tsv)
+          echo "::set-output name=name::$FUNCTION_APP"
+          echo "Function App name: $FUNCTION_APP"
+      
+      - name: Get CosmosDB Connection String
+        id: cosmos-db
+        run: |
+          COSMOS_DB_ACCOUNT=$(az deployment group show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name main \
+            --query properties.outputs.cosmosDBAccountName.value \
+            -o tsv)
+          
+          echo "CosmosDB Account name: $COSMOS_DB_ACCOUNT"
+          
+          # Get the connection string (this is secure)
+          CONNECTION_STRING=$(az cosmosdb keys list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name $COSMOS_DB_ACCOUNT \
+            --type connection-strings \
+            --query connectionStrings[0].connectionString \
+            -o tsv)
+          
+          # Save connection string to a file (not echoed to logs)
+          echo "$CONNECTION_STRING" > connection_string.txt
+      
+      - name: Deploy Azure Function App
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ steps.function-app.outputs.name }}
+          package: backend
+          respect-funcignore: true
+      
+      - name: Update Function App Settings
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Update app settings with correct connection string
+            CONNECTION_STRING=$(cat connection_string.txt)
+            
+            az functionapp config appsettings set \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name ${{ steps.function-app.outputs.name }} \
+              --settings "COSMOS_CONNECTION_STRING=$CONNECTION_STRING" "TABLE_NAME=visitors"
+            
+            # Configure CORS for the frontend
+            STATIC_URL=$(az deployment group show \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name main \
+              --query properties.outputs.storageStaticWebsiteUrl.value \
+              -o tsv | sed 's/https:\/\///')
+            
+            CDN_URL=$(az deployment group show \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name main \
+              --query properties.outputs.cdnEndpointUrl.value \
+              -o tsv | sed 's/https:\/\///' || echo "")
+            
+            CORS_URLS="https://$STATIC_URL"
+            if [[ -n "$CDN_URL" ]]; then
+              CORS_URLS="$CORS_URLS,https://$CDN_URL"
+            fi
+            
+            echo "Setting CORS for: $CORS_URLS"
+            az functionapp cors add \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name ${{ steps.function-app.outputs.name }} \
+              --allowed-origins $CORS_URLS
+      
+      - name: Clean up sensitive files
+        run: rm connection_string.txt
+      
+      - name: Deployment Summary
+        run: |
+          FUNCTION_URL="https://${{ steps.function-app.outputs.name }}.azurewebsites.net"
+          echo "Deployment to ${{ env.ENVIRONMENT }} environment completed successfully."
+          echo "Function App URL: $FUNCTION_URL"
+          echo "API endpoints:"
+          echo "  - $FUNCTION_URL/api/GetResumeCounter"
+          echo "  - $FUNCTION_URL/api/UpdateResumeCounter"
