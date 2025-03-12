@@ -20,12 +20,12 @@ This project implements a cloud-based resume website with the following componen
 - Create resource groups
 - Configure service principal for GitHub Actions
 
-### Phase 2: Infrastructure as Code Development 🔄
+### Phase 2: Infrastructure as Code Development ✅
 - Develop ARM templates for required resources
 - Test deployments
 - Commit templates to repository
 
-### Phase 3: Backend API Development 🔄
+### Phase 3: Backend API Development ✅
 - Create Azure Functions project
 - Implement CosmosDB integration
 - Develop visitor counter functionality

@@ -67,7 +67,7 @@ The ARM templates in this directory will create the following Azure resources:
 
 The deployment script accepts the following parameters:
 1. Resource Group Name (required)
-2. Azure Region (optional, defaults to "eastus")
+2. Azure Region (optional, defaults to "ukwest")
 3. Environment (optional, defaults to "dev")
 
 ### Manual Deployment
