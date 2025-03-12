@@ -111,7 +111,7 @@ After successful deployment, you can verify the infrastructure by:
 
 ## Cleanup
 
-To remove all deployed resources when no longer needed:
+To remove all deployed resources when no longer needed
 
 ```bash
 az group delete --name azure-resume-dev-rg --yes
