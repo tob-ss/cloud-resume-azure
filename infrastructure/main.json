@@ -1,0 +1,342 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "environment": {
+            "type": "string",
+            "allowedValues": [
+                "dev",
+                "prod"
+            ],
+            "defaultValue": "dev",
+            "metadata": {
+                "description": "Environment (dev or prod)"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources"
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "defaultValue": "[concat('resumesa', parameters('environment'), uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Name of the storage account"
+            }
+        },
+        "functionAppName": {
+            "type": "string",
+            "defaultValue": "[concat('resume-func-', parameters('environment'), '-', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Name of the function app"
+            }
+        },
+        "appServicePlanName": {
+            "type": "string",
+            "defaultValue": "[concat('resume-plan-', parameters('environment'), '-', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Name of the App Service Plan"
+            }
+        },
+        "cosmosDBAccountName": {
+            "type": "string",
+            "defaultValue": "[concat('resume-cosmos-', parameters('environment'), '-', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Name of the Cosmos DB account"
+            }
+        },
+        "cdnProfileName": {
+            "type": "string",
+            "defaultValue": "[concat('resume-cdn-', parameters('environment'), '-', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Name of the CDN profile"
+            }
+        },
+        "cdnEndpointName": {
+            "type": "string",
+            "defaultValue": "[concat('resume-endpoint-', parameters('environment'), '-', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Name of the CDN endpoint"
+            }
+        },
+        "appInsightsName": {
+            "type": "string",
+            "defaultValue": "[concat('resume-insights-', parameters('environment'), '-', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Name of Application Insights"
+            }
+        }
+    },
+    "variables": {
+        "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+        "tableName": "visitors",
+        "functionWorkerRuntime": "python"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-04-01",
+            "name": "[parameters('storageAccountName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "supportsHttpsTrafficOnly": true,
+                "encryption": {
+                    "services": {
+                        "file": {
+                            "keyType": "Account",
+                            "enabled": true
+                        },
+                        "blob": {
+                            "keyType": "Account",
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "accessTier": "Hot"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices",
+            "apiVersion": "2021-04-01",
+            "name": "[concat(parameters('storageAccountName'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            ],
+            "properties": {
+                "cors": {
+                    "corsRules": [
+                        {
+                            "allowedOrigins": [
+                                "*"
+                            ],
+                            "allowedMethods": [
+                                "GET"
+                            ],
+                            "allowedHeaders": [
+                                "*"
+                            ],
+                            "exposedHeaders": [
+                                "*"
+                            ],
+                            "maxAgeInSeconds": 3600
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2021-04-01",
+            "name": "[concat(parameters('storageAccountName'), '/default/$web')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            ],
+            "properties": {
+                "publicAccess": "None"
+            }
+        },
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts",
+            "apiVersion": "2021-04-15",
+            "name": "[parameters('cosmosDBAccountName')]",
+            "location": "[parameters('location')]",
+            "kind": "GlobalDocumentDB",
+            "properties": {
+                "databaseAccountOfferType": "Standard",
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Session"
+                },
+                "locations": [
+                    {
+                        "locationName": "[parameters('location')]",
+                        "failoverPriority": 0,
+                        "isZoneRedundant": false
+                    }
+                ],
+                "capabilities": [
+                    {
+                        "name": "EnableTable"
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts/tables",
+            "apiVersion": "2021-04-15",
+            "name": "[concat(parameters('cosmosDBAccountName'), '/', variables('tableName'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDBAccountName'))]"
+            ],
+            "properties": {
+                "resource": {
+                    "id": "[variables('tableName')]"
+                },
+                "options": {}
+            }
+        },
+        {
+            "type": "Microsoft.Insights/components",
+            "apiVersion": "2020-02-02",
+            "name": "[parameters('appInsightsName')]",
+            "location": "[parameters('location')]",
+            "kind": "web",
+            "properties": {
+                "Application_Type": "web",
+                "Request_Source": "rest"
+            }
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2021-02-01",
+            "name": "[parameters('appServicePlanName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Y1",
+                "tier": "Dynamic",
+                "size": "Y1",
+                "family": "Y"
+            },
+            "properties": {
+                "computeMode": "Dynamic"
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2021-02-01",
+            "name": "[parameters('functionAppName')]",
+            "location": "[parameters('location')]",
+            "kind": "functionapp",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+                "[resourceId('Microsoft.Insights/components', parameters('appInsightsName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDBAccountName'))]"
+            ],
+            "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';EndpointSuffix=', environment().suffixes.storage, ';AccountKey=', listKeys(variables('storageAccountId'), '2019-06-01').keys[0].value)]"
+                        },
+                        {
+                            "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';EndpointSuffix=', environment().suffixes.storage, ';AccountKey=', listKeys(variables('storageAccountId'), '2019-06-01').keys[0].value)]"
+                        },
+                        {
+                            "name": "WEBSITE_CONTENTSHARE",
+                            "value": "[toLower(parameters('functionAppName'))]"
+                        },
+                        {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~4"
+                        },
+                        {
+                            "name": "FUNCTIONS_WORKER_RUNTIME",
+                            "value": "[variables('functionWorkerRuntime')]"
+                        },
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').InstrumentationKey]"
+                        },
+                        {
+                            "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                            "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').ConnectionString]"
+                        },
+                        {
+                            "name": "COSMOS_CONNECTION_STRING",
+                            "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDBAccountName')), '2021-04-15').connectionStrings[0].connectionString]"
+                        },
+                        {
+                            "name": "TABLE_NAME",
+                            "value": "[variables('tableName')]"
+                        }
+                    ],
+                    "cors": {
+                        "allowedOrigins": [
+                            "[concat('https://', parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]",
+                            "[concat('https://', parameters('cdnEndpointName'), '.azureedge.net')]",
+                            "http://localhost:3000"
+                        ]
+                    }
+                },
+                "httpsOnly": true
+            }
+        },
+        {
+            "type": "Microsoft.Cdn/profiles",
+            "apiVersion": "2020-09-01",
+            "name": "[parameters('cdnProfileName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard_Microsoft"
+            }
+        },
+        {
+            "type": "Microsoft.Cdn/profiles/endpoints",
+            "apiVersion": "2020-09-01",
+            "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'))]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('cdnProfileName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            ],
+            "properties": {
+                "originHostHeader": "[concat(parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]",
+                "isHttpAllowed": false,
+                "isHttpsAllowed": true,
+                "queryStringCachingBehavior": "IgnoreQueryString",
+                "contentTypesToCompress": [
+                    "text/plain",
+                    "text/html",
+                    "text/css",
+                    "application/x-javascript",
+                    "text/javascript"
+                ],
+                "isCompressionEnabled": true,
+                "origins": [
+                    {
+                        "name": "origin1",
+                        "properties": {
+                            "hostName": "[concat(parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]",
+                            "originHostHeader": "[concat(parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]",
+                            "enabled": true
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "storageAccountName": {
+            "type": "string",
+            "value": "[parameters('storageAccountName')]"
+        },
+        "functionAppName": {
+            "type": "string",
+            "value": "[parameters('functionAppName')]"
+        },
+        "cosmosDBAccountName": {
+            "type": "string",
+            "value": "[parameters('cosmosDBAccountName')]"
+        },
+        "cdnEndpointUrl": {
+            "type": "string",
+            "value": "[concat('https://', parameters('cdnEndpointName'), '.azureedge.net')]"
+        },
+        "storageStaticWebsiteUrl": {
+            "type": "string",
+            "value": "[concat('https://', parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]"
+        }
+    }
+}
