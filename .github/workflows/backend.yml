@@ -61,7 +61,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
+          # Create Python packages directory structure
+          cd backend
+          mkdir -p .python_packages/lib/site-packages
+          # Install packages to the expected directory structure
+          pip install --target=".python_packages/lib/site-packages" -r requirements.txt
           npm i -g azure-functions-core-tools@4 --unsafe-perm true
       
       - name: Login to Azure
