@@ -267,7 +267,7 @@
                     ],
                     "cors": {
                         "allowedOrigins": [
-                            "[concat('https://', parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]",
+                            "[concat('https://', parameters('storageAccountName'), '.z35.web.core.windows.net')]",
                             "[concat('https://', parameters('cdnEndpointName'), '.azureedge.net')]",
                             "http://localhost:3000"
                         ]

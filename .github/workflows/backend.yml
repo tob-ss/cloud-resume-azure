@@ -139,24 +139,27 @@ jobs:
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --name main \
               --query properties.outputs.storageStaticWebsiteUrl.value \
-              -o tsv | sed 's/https:\/\///')
+              -o tsv)
             
             CDN_URL=$(az deployment group show \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --name main \
               --query properties.outputs.cdnEndpointUrl.value \
-              -o tsv | sed 's/https:\/\///' || echo "")
+              -o tsv || echo "")
             
-            CORS_URLS="https://$STATIC_URL"
-            if [[ -n "$CDN_URL" ]]; then
-              CORS_URLS="$CORS_URLS,https://$CDN_URL"
-            fi
-            
-            echo "Setting CORS for: $CORS_URLS"
+            echo "Setting CORS for the static website URL"
             az functionapp cors add \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --name ${{ steps.function-app.outputs.name }} \
-              --allowed-origins $CORS_URLS
+              --allowed-origins "$STATIC_URL"
+            
+            if [[ -n "$CDN_URL" ]]; then
+              echo "Setting CORS for the CDN endpoint URL"
+              az functionapp cors add \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --name ${{ steps.function-app.outputs.name }} \
+                --allowed-origins "$CDN_URL"
+            fi
       
       - name: Clean up sensitive files
         run: rm connection_string.txt
