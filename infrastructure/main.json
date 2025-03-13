@@ -277,6 +277,34 @@
             }
         },
         {
+            "type": "Microsoft.Web/sites/config",
+            "apiVersion": "2024-04-01",
+            "name": "[concat(parameters('functionAppName'), '/logs')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+            ],
+            "properties": {
+                "applicationLogs": {
+                    "fileSystem": {
+                        "level": "Information"
+                    }
+                },
+                "detailedErrorMessages": {
+                    "enabled": true
+                },
+                "failedRequestsTracing": {
+                    "enabled": true
+                },
+                "httpLogs": {
+                    "fileSystem": {
+                        "enabled": true,
+                        "retentionInDays": 7,
+                        "retentionInMb": 35
+                    }
+                }
+            }
+        },
+        {
             "type": "Microsoft.Cdn/profiles",
             "apiVersion": "2024-09-01",
             "name": "[parameters('cdnProfileName')]",
