@@ -120,6 +120,7 @@ jobs:
           app-name: ${{ steps.function-app.outputs.name }}
           package: backend
           respect-funcignore: true
+          operating-system: 'Linux'
       
       - name: Update Function App Settings
         uses: azure/CLI@v1
