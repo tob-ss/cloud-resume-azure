@@ -8,7 +8,7 @@ on:
       - 'frontend/**'
   pull_request:
     branches:
-      - main  # Run tests on PRs to main but don't deploy
+      - master  # Run tests on PRs to main but don't deploy
     paths:
       - 'frontend/**'
   workflow_dispatch:
@@ -62,7 +62,7 @@ jobs:
       - name: Set environment variables
         id: env-vars
         run: |
-          if [[ "${{ github.event.inputs.environment }}" == "prod" || "${{ github.ref }}" == "refs/heads/main" ]]; then
+          if [[ "${{ github.event.inputs.environment }}" == "prod" || "${{ github.ref }}" == "refs/heads/master" ]]; then
             echo "ENVIRONMENT=prod" >> $GITHUB_ENV
             echo "RESOURCE_GROUP=azure-resume-prod-rg" >> $GITHUB_ENV
           else
