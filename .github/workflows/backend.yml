@@ -121,7 +121,7 @@ jobs:
           package: backend
           respect-funcignore: true
           scm-do-build-during-deployment: true
-          build-remote: true
+          remote-build: true
       
       - name: Update Function App Settings
         uses: azure/CLI@v1

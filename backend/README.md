@@ -1,4 +1,4 @@
-# Azure Resume Challenge - Backend API
+# Azure Resume Challenge -- Backend API
 
 This directory contains the Azure Functions API for the resume visitor counter.
 
