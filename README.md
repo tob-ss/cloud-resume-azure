@@ -30,7 +30,7 @@ This project implements a cloud-based resume website with the following componen
 - Implement CosmosDB integration
 - Develop visitor counter functionality
 
-### Phase 4: Frontend Resume Website 🔄
+### Phase 4: Frontend Resume Website ✅
 - Design and develop HTML/CSS resume
 - Create JavaScript for visitor counter
 - Implement API integration

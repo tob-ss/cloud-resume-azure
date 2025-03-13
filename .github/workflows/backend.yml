@@ -125,8 +125,21 @@ jobs:
           package: backend
           respect-funcignore: true
           scm-do-build-during-deployment: true
-          remote-build: true
-      
+          enable-oryx-build: true
+
+      # Add the new step right here, after the deployment step
+      - name: Deploy dependencies manually
+        uses: azure/CLI@v1
+        if: always()  # Run even if the previous step failed
+        with:
+          inlineScript: |
+            cd backend
+            zip -r ../functionapp.zip . -x "*.git*" "*.venv*"
+            az functionapp deployment source config-zip \
+              -g ${{ env.RESOURCE_GROUP }} \
+              -n ${{ steps.function-app.outputs.name }} \
+              --src ../functionapp.zip
+
       - name: Update Function App Settings
         uses: azure/CLI@v1
         with:
