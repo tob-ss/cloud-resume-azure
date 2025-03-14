@@ -133,6 +133,9 @@ jobs:
         if: always()  # Run even if the previous step failed
         with:
           inlineScript: |
+            # Install zip utility first
+            apt-get update && apt-get install -y zip
+            
             cd backend
             zip -r ../functionapp.zip . -x "*.git*" "*.venv*"
             az functionapp deployment source config-zip \
