@@ -68,6 +68,16 @@ jobs:
           pip install --target=".python_packages/lib/site-packages" -r requirements.txt
           npm i -g azure-functions-core-tools@4 --unsafe-perm true
       
+      - name: Check Python packages directory
+        run: |
+          cd backend
+          echo "Checking Python packages directory structure:"
+          find .python_packages -type d | sort
+          echo "Listing .python_packages contents:"
+          ls -la .python_packages/lib/site-packages/
+          echo "Looking for azure packages:"
+          find .python_packages -name "azure*" | sort
+
       - name: Login to Azure
         uses: azure/login@v1
         with:
@@ -142,19 +152,6 @@ jobs:
             # Restart function app to apply settings
             az functionapp restart --name ${{ steps.function-app.outputs.name }} \
               --resource-group ${{ env.RESOURCE_GROUP }}
-
-      - name: Install package directly on Function App
-        uses: azure/CLI@v1
-        with:
-          inlineScript: |
-            # Install the package directly in the Function App
-            az functionapp run --resource-group ${{ env.RESOURCE_GROUP }} \
-              --name ${{ steps.function-app.outputs.name }} \
-              --command "pip install azure-data-tables==12.4.2"
-            
-            # Restart the Function App to apply changes
-            az functionapp restart --resource-group ${{ env.RESOURCE_GROUP }} \
-              --name ${{ steps.function-app.outputs.name }}
 
       - name: Update Function App Settings
         uses: azure/CLI@v1
