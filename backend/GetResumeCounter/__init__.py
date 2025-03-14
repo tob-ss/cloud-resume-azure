@@ -12,21 +12,16 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         connection_string = os.environ["COSMOS_CONNECTION_STRING"]
         table_name = os.environ["TABLE_NAME"]
         
-        # Convert SQL connection string to Table API format
+        # Parse SQL connection string
         conn_parts = dict(part.split('=', 1) for part in connection_string.split(';') if part and '=' in part)
-        account_endpoint = conn_parts.get('AccountEndpoint', '')
         account_key = conn_parts.get('AccountKey', '')
         
-        # Extract account name from endpoint
-        account_name = account_endpoint.split('//')[1].split('.')[0]
-        
-        # Create Table API endpoint from SQL endpoint
-        table_endpoint = account_endpoint.replace('.documents.', '.table.')
-        
-        # Create a Table API connection string
+        # Create a Table API connection string with the known endpoint
+        account_name = "resume-cosmos-dev-jwmugt4mm4bwe"
+        table_endpoint = "https://resume-cosmos-dev-jwmugt4mm4bwe.table.cosmos.azure.com:443/"
         table_connection_string = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};TableEndpoint={table_endpoint}"
         
-        logging.info(f"Successfully converted connection string format")
+        logging.info("Using explicit Table API connection string")
         
         # Create the table service
         table_service = TableServiceClient.from_connection_string(conn_str=table_connection_string)
