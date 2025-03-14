@@ -13,6 +13,13 @@
                 "description": "Environment (dev or prd)"
             }
         },
+        "deployCustomDomains": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "Whether to deploy custom domain resources"
+            }
+        },
         "location": {
             "type": "string",
             "defaultValue": "[resourceGroup().location]",
