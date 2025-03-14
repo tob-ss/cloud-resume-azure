@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Determine environment dynamically
     const isDev = window.location.hostname.includes('dev') || 
-                  window.location.hostname.includes('localhost');
+                  window.location.hostname.includes('jwmugt4mm4bwe');
 
     // Set the appropriate API base URL
     const apiBaseUrl = isDev 
@@ -18,6 +18,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const getResumeUrl = `${apiBaseUrl}GetResumeCounter`;
     const updateResumeUrl = `${apiBaseUrl}UpdateResumeCounter`;
+
+    console.log("Current hostname:", window.location.hostname);
+    console.log("isDev check result:", isDev);
+    console.log("Selected API base URL:", apiBaseUrl);
         
     // Function to get the counter value from the API
     async function getCount() {
