@@ -54,6 +54,13 @@
                 "description": "Your custom domain name (e.g., example.com)"
             }
         },
+        "cdnProfileName": {
+            "type": "string",
+            "defaultValue": "[concat('resume-cdn-', parameters('environment'), '-', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Name of the CDN profile"
+            }
+        },
         "cdnProfileNameDev": {
             "type": "string",
             "defaultValue": "[concat('resume-cdn-dev-', uniqueString(resourceGroup().id))]",
