@@ -133,15 +133,15 @@ jobs:
         if: always()  # Run even if the previous step failed
         with:
           inlineScript: |
-            # Install zip utility first
-            apt-get update && apt-get install -y zip
+            # Use direct deployment of Python packages
+            az functionapp config appsettings set \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name ${{ steps.function-app.outputs.name }} \
+              --settings "PYTHON_ENABLE_WORKER_EXTENSIONS=1"
             
-            cd backend
-            zip -r ../functionapp.zip . -x "*.git*" "*.venv*"
-            az functionapp deployment source config-zip \
-              -g ${{ env.RESOURCE_GROUP }} \
-              -n ${{ steps.function-app.outputs.name }} \
-              --src ../functionapp.zip
+            # Restart function app to apply settings
+            az functionapp restart --name ${{ steps.function-app.outputs.name }} \
+              --resource-group ${{ env.RESOURCE_GROUP }}
 
       - name: Update Function App Settings
         uses: azure/CLI@v1
