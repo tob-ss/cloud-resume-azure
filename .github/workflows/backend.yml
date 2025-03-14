@@ -143,6 +143,19 @@ jobs:
             az functionapp restart --name ${{ steps.function-app.outputs.name }} \
               --resource-group ${{ env.RESOURCE_GROUP }}
 
+      - name: Install package directly on Function App
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Install the package directly in the Function App
+            az functionapp run --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name ${{ steps.function-app.outputs.name }} \
+              --command "pip install azure-data-tables==12.4.2"
+            
+            # Restart the Function App to apply changes
+            az functionapp restart --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name ${{ steps.function-app.outputs.name }}
+
       - name: Update Function App Settings
         uses: azure/CLI@v1
         with:
