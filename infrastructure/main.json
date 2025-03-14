@@ -280,11 +280,10 @@
                     ],
                     "cors": {
                         "allowedOrigins": [
-                            "[concat('https://', parameters('storageAccountName'), '.z35.web.core.windows.net')]",
+                            "[concat('https://', parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]",
                             "[concat('https://', parameters('cdnEndpointName'), '.azureedge.net')]",
                             "[concat('https://', parameters('domainName'))]",
                             "[concat('https://www.', parameters('domainName'))]",
-                            "[concat('https://dev.', parameters('domainName'))]",
                             "http://localhost:3000"
                         ]
                     }
@@ -402,19 +401,6 @@
         },
         {
             "condition": "[parameters('createDnsZone')]",
-            "type": "Microsoft.Cdn/profiles/endpoints/customDomains/enableCustomHttps",
-            "apiVersion": "2020-09-01",
-            "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'), '/', replace(parameters('domainName'), '.', '-'), '/default')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Cdn/profiles/endpoints/customDomains', parameters('cdnProfileName'), parameters('cdnEndpointName'), replace(parameters('domainName'), '.', '-'))]"
-            ],
-            "properties": {
-                "certificateSource": "Cdn",
-                "minimumTlsVersion": "TLS12"
-            }
-        },
-        {
-            "condition": "[parameters('createDnsZone')]",
             "type": "Microsoft.Cdn/profiles/endpoints/customDomains",
             "apiVersion": "2020-09-01",
             "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'), '/www-', replace(parameters('domainName'), '.', '-'))]",
@@ -424,19 +410,6 @@
             ],
             "properties": {
                 "hostName": "[concat('www.', parameters('domainName'))]"
-            }
-        },
-        {
-            "condition": "[parameters('createDnsZone')]",
-            "type": "Microsoft.Cdn/profiles/endpoints/customDomains/enableCustomHttps",
-            "apiVersion": "2020-09-01",
-            "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'), '/www-', replace(parameters('domainName'), '.', '-'), '/default')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Cdn/profiles/endpoints/customDomains', parameters('cdnProfileName'), parameters('cdnEndpointName'), concat('www-', replace(parameters('domainName'), '.', '-')))]"
-            ],
-            "properties": {
-                "certificateSource": "Cdn",
-                "minimumTlsVersion": "TLS12"
             }
         }
     ],
