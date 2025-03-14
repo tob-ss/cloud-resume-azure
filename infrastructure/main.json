@@ -384,19 +384,6 @@
                     "id": "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]"
                 }
             }
-        },
-        {
-            "condition": "[parameters('createDnsZone')]",
-            "type": "Microsoft.Cdn/profiles/endpoints/customDomains",
-            "apiVersion": "2020-09-01",
-            "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'), '/', replace(parameters('domainName'), '.', '-'))]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]",
-                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
-            ],
-            "properties": {
-                "hostName": "[parameters('domainName')]"
-            }
         }
     ],
     "outputs": {
