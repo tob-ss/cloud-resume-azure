@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Determine environment dynamically
     const isDev = window.location.hostname.includes('dev') || 
-                 // window.location.hostname.includes('localhost');
                   window.location.hostname.includes('jwmugt4mm4bwe');
 
     // Set the appropriate API base URL
