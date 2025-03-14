@@ -258,7 +258,7 @@
                         },
                         {
                             "name": "COSMOS_CONNECTION_STRING",
-                            "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDBAccountName')), '2021-04-15').connectionStrings[1].connectionString]"
+                            "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDBAccountName')), '2021-04-15').connectionStrings[0].connectionString]"
                         },
                         {
                             "name": "TABLE_NAME",
