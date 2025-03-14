@@ -61,6 +61,13 @@
                 "description": "Name of the CDN profile"
             }
         },
+        "cdnEndpointName": {
+            "type": "string",
+            "defaultValue": "[concat('resume-endpoint-', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Name of the CDN endpoint"
+            }
+        },
         "cdnProfileNameDev": {
             "type": "string",
             "defaultValue": "[concat('resume-cdn-dev-', uniqueString(resourceGroup().id))]",
