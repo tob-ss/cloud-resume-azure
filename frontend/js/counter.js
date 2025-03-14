@@ -9,12 +9,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Determine environment dynamically
     const isDev = window.location.hostname.includes('dev') || 
-    window.location.hostname.includes('localhost');
+                  window.location.hostname.includes('localhost');
 
     // Set the appropriate API base URL
     const apiBaseUrl = isDev 
-    ? 'https://resume-func-dev-jwmugt4mm4bwe.azurewebsites.net/api/'
-    : 'https://resume-func-prd-s4ot3manh2e7g.azurewebsites.net/api/';
+        ? 'https://resume-func-dev-jwmugt4mm4bwe.azurewebsites.net/api/'
+        : 'https://resume-func-prd-s4ot3manh2e7g.azurewebsites.net/api/';
     
     // Function to get the counter value from the API
     async function getCount() {
