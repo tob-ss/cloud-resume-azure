@@ -19,8 +19,8 @@ class TestFunctions(unittest.TestCase):
             params={}
         )
         
-        # Mock environment variables
-        os.environ["COSMOS_CONNECTION_STRING"] = "mock_connection_string"
+        # Use a properly formatted mock connection string
+        os.environ["COSMOS_CONNECTION_STRING"] = "AccountEndpoint=https://mock-account.documents.azure.com:443/;AccountKey=mock-key;"
         os.environ["TABLE_NAME"] = "visitors"
         
         # Mock the table client and get_entity method
@@ -46,8 +46,8 @@ class TestFunctions(unittest.TestCase):
             params={}
         )
         
-        # Mock environment variables
-        os.environ["COSMOS_CONNECTION_STRING"] = "mock_connection_string"
+        # Use a properly formatted mock connection string
+        os.environ["COSMOS_CONNECTION_STRING"] = "AccountEndpoint=https://mock-account.documents.azure.com:443/;AccountKey=mock-key;"
         os.environ["TABLE_NAME"] = "visitors"
         
         # Mock the table client and get_entity method
@@ -78,8 +78,8 @@ class TestFunctions(unittest.TestCase):
             params={}
         )
         
-        # Mock environment variables
-        os.environ["COSMOS_CONNECTION_STRING"] = "mock_connection_string"
+        # Use a properly formatted mock connection string
+        os.environ["COSMOS_CONNECTION_STRING"] = "AccountEndpoint=https://mock-account.documents.azure.com:443/;AccountKey=mock-key;"
         os.environ["TABLE_NAME"] = "visitors"
         
         # Mock the table client and get_entity method to raise an exception
