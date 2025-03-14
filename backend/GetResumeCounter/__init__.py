@@ -11,21 +11,37 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         # Get connection string and table name from environment variables
         connection_string = os.environ["COSMOS_CONNECTION_STRING"]
         table_name = os.environ["TABLE_NAME"]
-        
+
+        logging.info(f"Table name from environment: {table_name}")
+        logging.info("Processing connection string...")
+
         # Parse SQL connection string
         conn_parts = dict(part.split('=', 1) for part in connection_string.split(';') if part and '=' in part)
         account_key = conn_parts.get('AccountKey', '')
-        
-        # Extract account name from the endpoint in the connection string
         account_endpoint = conn_parts.get('AccountEndpoint', '')
-        account_name = account_endpoint.split('//')[1].split('.')[0]  # Gets the account name from the URL
+
+        # Log the endpoint (without exposing the full connection string)
+        masked_endpoint = account_endpoint
+        logging.info(f"Account endpoint from connection string: {masked_endpoint}")
+
+        # Extract account name from the endpoint in the connection string
+        account_name = account_endpoint.split('//')[1].split('.')[0]
+        logging.info(f"Extracted account name: {account_name}")
 
         # Create table endpoint by replacing documents with table in the endpoint URL
-        table_endpoint = account_endpoint.replace('.documents.', '.table.')
+        original_table_endpoint = account_endpoint.replace('.documents.', '.table.')
+        table_endpoint = original_table_endpoint
         if table_endpoint == account_endpoint:  # In case the replacement didn't happen
             table_endpoint = f"https://{account_name}.table.cosmos.azure.com:443/"
+            logging.info("Using constructed table endpoint (replacement didn't work)")
+        else:
+            logging.info("Successfully replaced .documents. with .table. in endpoint")
 
+        logging.info(f"Final table endpoint: {table_endpoint}")
+
+        # Create the Table API connection string (log a safe version)
         table_connection_string = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};TableEndpoint={table_endpoint}"
+        logging.info(f"Created Table API connection string with AccountName: {account_name}")
         
         logging.info("Using explicit Table API connection string")
         
