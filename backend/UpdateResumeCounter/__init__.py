@@ -15,10 +15,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         # Parse SQL connection string
         conn_parts = dict(part.split('=', 1) for part in connection_string.split(';') if part and '=' in part)
         account_key = conn_parts.get('AccountKey', '')
+        account_endpoint = conn_parts.get('AccountEndpoint', '')
         
         # Create a Table API connection string with the known endpoint
-        account_name = "resume-cosmos-dev-jwmugt4mm4bwe"
-        table_endpoint = "https://resume-cosmos-dev-jwmugt4mm4bwe.table.cosmos.azure.com:443/"
+        account_name = account_endpoint.split('//')[1].split('.')[0]
+        table_endpoint = f"https://{account_name}.table.cosmos.azure.com:443/"
         table_connection_string = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};TableEndpoint={table_endpoint}"
         
         logging.info("Using explicit Table API connection string")
