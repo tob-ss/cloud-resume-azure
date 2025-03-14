@@ -68,20 +68,6 @@
                 "description": "Name of the CDN endpoint"
             }
         },
-        "cdnProfileNameDev": {
-            "type": "string",
-            "defaultValue": "[concat('resume-cdn-dev-', uniqueString(resourceGroup().id))]",
-            "metadata": {
-                "description": "Name of the CDN profile for development"
-            }
-        },
-        "cdnEndpointNameDev": {
-            "type": "string",
-            "defaultValue": "[concat('resume-endpoint-dev-', uniqueString(resourceGroup().id))]",
-            "metadata": {
-                "description": "Name of the CDN endpoint for development"
-            }
-        },
         "createDnsZone": {
             "type": "bool",
             "defaultValue": false,
@@ -296,6 +282,7 @@
                         "allowedOrigins": [
                             "[concat('https://', parameters('storageAccountName'), '.z35.web.core.windows.net')]",
                             "[concat('https://', parameters('cdnEndpointName'), '.azureedge.net')]",
+                            "[concat('https://', parameters('domainName'))]",
                             "http://localhost:3000"
                         ]
                     }
@@ -340,34 +327,6 @@
             "properties": {}
         },
         {
-            "type": "Microsoft.Network/dnsZones/A",
-            "apiVersion": "2018-05-01",
-            "name": "[concat(parameters('domainName'), '/', '@')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
-            ],
-            "properties": {
-                "TTL": 3600,
-                "targetResource": {
-                    "id": "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]"
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Network/dnsZones/A",
-            "apiVersion": "2018-05-01",
-            "name": "[concat(parameters('domainName'), '/dev')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
-            ],
-            "properties": {
-                "TTL": 3600,
-                "targetResource": {
-                    "id": "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileNameDev'), parameters('cdnEndpointNameDev'))]"
-                }
-            }
-        },
-        {
             "type": "Microsoft.Cdn/profiles",
             "apiVersion": "2024-09-01",
             "name": "[parameters('cdnProfileName')]",
@@ -377,6 +336,57 @@
             }
         },
         {
+            "type": "Microsoft.Cdn/profiles/endpoints",
+            "apiVersion": "2024-09-01",
+            "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'))]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles', parameters('cdnProfileName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            ],
+            "properties": {
+                "originHostHeader": "[concat(parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]",
+                "isHttpAllowed": false,
+                "isHttpsAllowed": true,
+                "queryStringCachingBehavior": "IgnoreQueryString",
+                "contentTypesToCompress": [
+                    "text/plain",
+                    "text/html",
+                    "text/css",
+                    "application/x-javascript",
+                    "text/javascript"
+                ],
+                "isCompressionEnabled": true,
+                "origins": [
+                    {
+                        "name": "origin1",
+                        "properties": {
+                            "hostName": "[concat(parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]",
+                            "originHostHeader": "[concat(parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]",
+                            "enabled": true
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "condition": "[parameters('createDnsZone')]",
+            "type": "Microsoft.Network/dnsZones/A",
+            "apiVersion": "2018-05-01",
+            "name": "[concat(parameters('domainName'), '/', '@')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
+                "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]"
+            ],
+            "properties": {
+                "TTL": 3600,
+                "targetResource": {
+                    "id": "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]"
+                }
+            }
+        },
+        {
+            "condition": "[parameters('createDnsZone')]",
             "type": "Microsoft.Cdn/profiles/endpoints/customDomains",
             "apiVersion": "2020-09-01",
             "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'), '/', replace(parameters('domainName'), '.', '-'))]",
@@ -386,18 +396,6 @@
             ],
             "properties": {
                 "hostName": "[parameters('domainName')]"
-            }
-        },
-        {
-            "type": "Microsoft.Cdn/profiles/endpoints/customDomains",
-            "apiVersion": "2020-09-01",
-            "name": "[concat(parameters('cdnProfileNameDev'), '/', parameters('cdnEndpointNameDev'), '/', concat('dev-', replace(parameters('domainName'), '.', '-')))]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileNameDev'), parameters('cdnEndpointNameDev'))]",
-                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
-            ],
-            "properties": {
-                "hostName": "[concat('dev.', parameters('domainName'))]"
             }
         }
     ],
