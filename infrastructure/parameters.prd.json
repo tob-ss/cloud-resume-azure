@@ -13,6 +13,9 @@
         },
         "createDnsZone": {
             "value": true
-        }
+        },
+        "deployCustomDomains": {
+            "value": true
+        } 
     }
 }
