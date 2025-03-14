@@ -3,7 +3,8 @@ name: Infrastructure Deployment
 on:
   push:
     branches:
-      - dev  # Auto-deploy to dev on develop branch changes
+      - dev
+      - master  # Added master branch to trigger deployments
     paths:
       - 'infrastructure/**'
   pull_request:
@@ -85,9 +86,9 @@ jobs:
   
   deploy:
     needs: validate
-    if: success() && (github.ref == 'refs/heads/dev' || github.event_name == 'workflow_dispatch')
+    if: success() && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'dev' }}
+    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/master' && 'prd' || 'dev') }}
     
     steps:
       - uses: actions/checkout@v2
