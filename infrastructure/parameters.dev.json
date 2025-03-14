@@ -12,7 +12,7 @@
             "value": "dev.myazurecloudcv.com"
         },
         "deployCustomDomains": {
-            "value": true
+            "value": false
         } 
     }
 }
