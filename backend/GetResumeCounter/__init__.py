@@ -12,8 +12,29 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         connection_string = os.environ["COSMOS_CONNECTION_STRING"]
         table_name = os.environ["TABLE_NAME"]
         
+        logging.info(f"Table name from environment: {table_name}")
+        
+        # Parse SQL connection string
+        conn_parts = dict(part.split('=', 1) for part in connection_string.split(';') if part and '=' in part)
+        account_key = conn_parts.get('AccountKey', '')
+        account_endpoint = conn_parts.get('AccountEndpoint', '')
+        
+        logging.info(f"Account endpoint from connection string: {account_endpoint}")
+        
+        # Extract account name from the endpoint in the connection string
+        account_name = account_endpoint.split('//')[1].split('.')[0]
+        logging.info(f"Extracted account name: {account_name}")
+        
+        # Create Table API connection string with correct cosmos domain
+        table_endpoint = f"https://{account_name}.table.cosmos.azure.com:443/"
+        logging.info(f"Final table endpoint: {table_endpoint}")
+        
+        # Create connection string with the correct domain structure
+        table_connection_string = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};TableEndpoint={table_endpoint}"
+        logging.info(f"Created Table API connection string with AccountName: {account_name}")
+        
         # Create the table service
-        table_service = TableServiceClient.from_connection_string(conn_str=connection_string)
+        table_service = TableServiceClient.from_connection_string(conn_str=table_connection_string)
         table_client = table_service.get_table_client(table_name)
         
         # Get visitor counter entity - use a fixed partition and row key

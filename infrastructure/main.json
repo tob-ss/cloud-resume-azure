@@ -6,11 +6,11 @@
             "type": "string",
             "allowedValues": [
                 "dev",
-                "prod"
+                "prd"
             ],
             "defaultValue": "dev",
             "metadata": {
-                "description": "Environment (dev or prod)"
+                "description": "Environment (dev or prd)"
             }
         },
         "location": {
@@ -206,6 +206,7 @@
                 "family": "Y"
             },
             "properties": {
+                "reserved": true,
                 "computeMode": "Dynamic"
             }
         },
@@ -214,7 +215,7 @@
             "apiVersion": "2024-04-01",
             "name": "[parameters('functionAppName')]",
             "location": "[parameters('location')]",
-            "kind": "functionapp",
+            "kind": "functionapp,linux",
             "dependsOn": [
                 "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
                 "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
@@ -222,8 +223,10 @@
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDBAccountName'))]"
             ],
             "properties": {
+                "reserved": true,
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
                 "siteConfig": {
+                    "linuxFxVersion": "PYTHON|3.9",
                     "appSettings": [
                         {
                             "name": "AzureWebJobsStorage",
@@ -264,13 +267,41 @@
                     ],
                     "cors": {
                         "allowedOrigins": [
-                            "[concat('https://', parameters('storageAccountName'), '.z', parameters('location'), '.web.core.windows.net')]",
+                            "[concat('https://', parameters('storageAccountName'), '.z35.web.core.windows.net')]",
                             "[concat('https://', parameters('cdnEndpointName'), '.azureedge.net')]",
                             "http://localhost:3000"
                         ]
                     }
                 },
                 "httpsOnly": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/config",
+            "apiVersion": "2024-04-01",
+            "name": "[concat(parameters('functionAppName'), '/logs')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+            ],
+            "properties": {
+                "applicationLogs": {
+                    "fileSystem": {
+                        "level": "Information"
+                    }
+                },
+                "detailedErrorMessages": {
+                    "enabled": true
+                },
+                "failedRequestsTracing": {
+                    "enabled": true
+                },
+                "httpLogs": {
+                    "fileSystem": {
+                        "enabled": true,
+                        "retentionInDays": 7,
+                        "retentionInMb": 35
+                    }
+                }
             }
         },
         {

@@ -1,6 +1,6 @@
-# Azure Resume Challenge - Infrastructure
+# Azure Resume Challenge Infrastructure
 
-This directory contains the Infrastructure as Code (IaC) components for the Azure Resume Challenge using ARM templates.
+This directory contains the Infrastructure as Code (IaC) components for the Azure Resume Challenge using ARM templates
 
 ## Resources Created
 
@@ -111,9 +111,9 @@ After successful deployment, you can verify the infrastructure by:
 
 ## Cleanup
 
-To remove all deployed resources when no longer needed:
+To remove all deployed resources when no longer needed
 
 ```bash
 az group delete --name azure-resume-dev-rg --yes
 az group delete --name azure-resume-prod-rg --yes
-```
+```# Testing workflow

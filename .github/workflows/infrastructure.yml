@@ -1,0 +1,190 @@
+name: Infrastructure Deployment
+
+on:
+  push:
+    branches:
+      - dev  # Auto-deploy to dev on develop branch changes
+    paths:
+      - 'infrastructure/**'
+  pull_request:
+    branches:
+      - master  # Run tests on PRs to main but don't deploy
+    paths:
+      - 'infrastructure/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prd
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Set validation variables
+        id: validate-vars
+        run: |
+          # Use a temporary resource group for validation
+          echo "RESOURCE_GROUP=azure-resume-validation-rg" >> $GITHUB_ENV
+          echo "LOCATION=eastus" >> $GITHUB_ENV
+      
+      - name: Create validation resource group
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            if [ $(az group exists --name ${{ env.RESOURCE_GROUP }}) = false ]; then
+              az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
+            fi
+      
+      - name: Validate ARM template
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            cd infrastructure
+            echo "Validating ARM template for dev environment..."
+            az deployment group validate \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --template-file main.json \
+              --parameters @parameters.dev.json
+            
+            echo "Validating ARM template for prd environment..."
+            az deployment group validate \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --template-file main.json \
+              --parameters @parameters.prd.json
+      
+      - name: What-If Analysis
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            cd infrastructure
+            az deployment group what-if \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --template-file main.json \
+              --parameters @parameters.dev.json \
+          
+      
+      - name: Clean up validation resource group
+        if: always()
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az group delete --name ${{ env.RESOURCE_GROUP }} --yes --no-wait
+  
+  deploy:
+    needs: validate
+    if: success() && (github.ref == 'refs/heads/dev' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Set environment variables
+        id: env-vars
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "prd" || "${{ github.ref }}" == "refs/heads/master" ]]; then
+            echo "ENVIRONMENT=prd" >> $GITHUB_ENV
+            echo "RESOURCE_GROUP=azure-resume-prd-rg" >> $GITHUB_ENV
+            echo "LOCATION=ukwest" >> $GITHUB_ENV
+          else
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "RESOURCE_GROUP=azure-resume-dev-rg" >> $GITHUB_ENV
+            echo "LOCATION=ukwest" >> $GITHUB_ENV
+          fi
+          echo "Deploying to ${{ env.ENVIRONMENT }} environment in ${{ env.RESOURCE_GROUP }}"
+      
+      - name: Ensure resource group exists
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            if [ $(az group exists --name ${{ env.RESOURCE_GROUP }}) = false ]; then
+              echo "Creating resource group ${{ env.RESOURCE_GROUP }} in ${{ env.LOCATION }}"
+              az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
+            else
+              echo "Resource group ${{ env.RESOURCE_GROUP }} already exists"
+            fi
+      
+      - name: Deploy ARM template
+        uses: azure/CLI@v1
+        id: arm-deploy
+        with:
+          inlineScript: |
+            cd infrastructure
+            echo "Deploying ARM template to ${{ env.ENVIRONMENT }} environment..."
+            DEPLOYMENT_OUTPUT=$(az deployment group create \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --template-file main.json \
+              --parameters @parameters.${{ env.ENVIRONMENT }}.json \
+              --output json)
+            
+            echo "Deployment output: $DEPLOYMENT_OUTPUT"
+            
+            # Extract important values
+            STORAGE_ACCOUNT=$(echo $DEPLOYMENT_OUTPUT | jq -r '.properties.outputs.storageAccountName.value')
+            FUNCTION_APP=$(echo $DEPLOYMENT_OUTPUT | jq -r '.properties.outputs.functionAppName.value')
+            COSMOS_DB=$(echo $DEPLOYMENT_OUTPUT | jq -r '.properties.outputs.cosmosDBAccountName.value')
+            CDN_ENDPOINT_URL=$(echo $DEPLOYMENT_OUTPUT | jq -r '.properties.outputs.cdnEndpointUrl.value')
+            STATIC_WEBSITE_URL=$(echo $DEPLOYMENT_OUTPUT | jq -r '.properties.outputs.storageStaticWebsiteUrl.value')
+            
+            # Save outputs as step outputs
+            echo "::set-output name=storageAccountName::$STORAGE_ACCOUNT"
+            echo "::set-output name=functionAppName::$FUNCTION_APP"
+            echo "::set-output name=cosmosDBAccountName::$COSMOS_DB"
+            echo "::set-output name=cdnEndpointUrl::$CDN_ENDPOINT_URL"
+            echo "::set-output name=staticWebsiteUrl::$STATIC_WEBSITE_URL"
+      
+      - name: Configure Storage for Static Website
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            echo "Enabling static website hosting on storage account: ${{ steps.arm-deploy.outputs.storageAccountName }}"
+            az storage blob service-properties update \
+              --account-name ${{ steps.arm-deploy.outputs.storageAccountName }} \
+              --static-website \
+              --index-document index.html \
+              --404-document 404.html
+      
+      - name: Update Function App CORS settings
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Extract domains from URLs
+            STATIC_DOMAIN=$(echo "${{ steps.arm-deploy.outputs.staticWebsiteUrl }}" | sed 's/https:\/\///')
+            CDN_DOMAIN=$(echo "${{ steps.arm-deploy.outputs.cdnEndpointUrl }}" | sed 's/https:\/\///')
+            
+            echo "Adding CORS domains to Function App: $STATIC_DOMAIN, $CDN_DOMAIN"
+            az functionapp cors add \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name ${{ steps.arm-deploy.outputs.functionAppName }} \
+              --allowed-origins "https://$STATIC_DOMAIN" "https://$CDN_DOMAIN" "http://localhost:3000"
+      
+      - name: Deployment Summary
+        run: |
+          echo "Deployment to ${{ env.ENVIRONMENT }} environment completed successfully."
+          echo ""
+          echo "Resource Group: ${{ env.RESOURCE_GROUP }}"
+          echo "Storage Account: ${{ steps.arm-deploy.outputs.storageAccountName }}"
+          echo "Function App: ${{ steps.arm-deploy.outputs.functionAppName }}"
+          echo "CosmosDB Account: ${{ steps.arm-deploy.outputs.cosmosDBAccountName }}"
+          echo ""
+          echo "Static Website URL: ${{ steps.arm-deploy.outputs.staticWebsiteUrl }}"
+          echo "CDN Endpoint URL: ${{ steps.arm-deploy.outputs.cdnEndpointUrl }}"
+          echo "Function App URL: https://${{ steps.arm-deploy.outputs.functionAppName }}.azurewebsites.net"

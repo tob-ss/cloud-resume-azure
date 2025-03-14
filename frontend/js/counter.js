@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // API URL - update this with your Azure Function URL
             // This would be the URL of your deployed Azure Function
-            const apiUrl = 'https://YOUR-FUNCTION-APP-NAME.azurewebsites.net/api/GetResumeCounter';
+            const apiUrl = 'https://resume-func-dev-jwmugt4mm4bwe.azurewebsites.net/api/GetResumeCounter?';
             
             // For local testing, you can use:
             //const apiUrl = 'http://localhost:7071/api/GetResumeCounter';
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function updateCount() {
         try {
             // API URL - update this with your Azure Function URL
-            const apiUrl = 'https://YOUR-FUNCTION-APP-NAME.azurewebsites.net/api/UpdateResumeCounter';
+            const apiUrl = 'https://resume-func-dev-jwmugt4mm4bwe.azurewebsites.net/api/UpdateResumeCounter?';
             
             // For local testing, you can use:
             //const apiUrl = 'http://localhost:7071/api/UpdateResumeCounter';

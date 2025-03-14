@@ -12,8 +12,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         connection_string = os.environ["COSMOS_CONNECTION_STRING"]
         table_name = os.environ["TABLE_NAME"]
         
+        # Parse SQL connection string
+        conn_parts = dict(part.split('=', 1) for part in connection_string.split(';') if part and '=' in part)
+        account_key = conn_parts.get('AccountKey', '')
+        account_endpoint = conn_parts.get('AccountEndpoint', '')
+        
+        # Create a Table API connection string with the known endpoint
+        account_name = account_endpoint.split('//')[1].split('.')[0]
+        table_endpoint = f"https://{account_name}.table.cosmos.azure.com:443/"
+        table_connection_string = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};TableEndpoint={table_endpoint}"
+        
+        logging.info("Using explicit Table API connection string")
+        
         # Create the table service
-        table_service = TableServiceClient.from_connection_string(conn_str=connection_string)
+        table_service = TableServiceClient.from_connection_string(conn_str=table_connection_string)
         table_client = table_service.get_table_client(table_name)
         
         # Get visitor counter entity
