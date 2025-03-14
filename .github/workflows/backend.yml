@@ -3,8 +3,7 @@ name: Backend Deployment
 on:
   push:
     branches:
-      - dev
-      - master  # Added master branch to trigger deployments
+      - dev  # Auto-deploy to dev on develop branch changes
     paths:
       - 'backend/**'
   pull_request:
@@ -40,7 +39,6 @@ jobs:
           pip install pytest pytest-mock
           pip install -r backend/requirements.txt
       
-      # Uncomment this once you have actual tests
       #- name: Run unit tests
       #  run: |
       #    cd backend
@@ -48,9 +46,9 @@ jobs:
   
   deploy:
     needs: test
-    if: success() && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch')
+    if: success() && (github.ref == 'refs/heads/dev' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/master' && 'prd' || 'dev') }}
+    environment: ${{ github.event.inputs.environment || 'dev' }}
     
     steps:
       - uses: actions/checkout@v2
@@ -139,6 +137,7 @@ jobs:
           scm-do-build-during-deployment: false
           enable-oryx-build: true
 
+      # Add the new step right here, after the deployment step
       - name: Deploy dependencies manually
         uses: azure/CLI@v1
         if: always()  # Run even if the previous step failed
