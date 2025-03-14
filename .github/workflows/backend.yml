@@ -20,7 +20,7 @@ on:
         type: choice
         options:
           - dev
-          - prod
+          - prd
 
 jobs:
   test:
@@ -86,9 +86,9 @@ jobs:
       - name: Set environment variables
         id: env-vars
         run: |
-          if [[ "${{ github.event.inputs.environment }}" == "prod" || "${{ github.ref }}" == "refs/heads/master" ]]; then
-            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
-            echo "RESOURCE_GROUP=azure-resume-prod-rg" >> $GITHUB_ENV
+          if [[ "${{ github.event.inputs.environment }}" == "prd" || "${{ github.ref }}" == "refs/heads/master" ]]; then
+            echo "ENVIRONMENT=prd" >> $GITHUB_ENV
+            echo "RESOURCE_GROUP=azure-resume-prd-rg" >> $GITHUB_ENV
           else
             echo "ENVIRONMENT=dev" >> $GITHUB_ENV
             echo "RESOURCE_GROUP=azure-resume-dev-rg" >> $GITHUB_ENV

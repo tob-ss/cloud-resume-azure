@@ -16,9 +16,15 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         conn_parts = dict(part.split('=', 1) for part in connection_string.split(';') if part and '=' in part)
         account_key = conn_parts.get('AccountKey', '')
         
-        # Create a Table API connection string with the known endpoint
-        account_name = "resume-cosmos-dev-jwmugt4mm4bwe"
-        table_endpoint = "https://resume-cosmos-dev-jwmugt4mm4bwe.table.cosmos.azure.com:443/"
+        # Extract account name from the endpoint in the connection string
+        account_endpoint = conn_parts.get('AccountEndpoint', '')
+        account_name = account_endpoint.split('//')[1].split('.')[0]  # Gets the account name from the URL
+
+        # Create table endpoint by replacing documents with table in the endpoint URL
+        table_endpoint = account_endpoint.replace('.documents.', '.table.')
+        if table_endpoint == account_endpoint:  # In case the replacement didn't happen
+            table_endpoint = f"https://{account_name}.table.cosmos.azure.com:443/"
+
         table_connection_string = f"DefaultEndpointsProtocol=https;AccountName={account_name};AccountKey={account_key};TableEndpoint={table_endpoint}"
         
         logging.info("Using explicit Table API connection string")
