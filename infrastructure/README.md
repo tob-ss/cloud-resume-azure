@@ -1,4 +1,4 @@
-# Azure Resume Challenge Infrastructure
+# Azure Resume Challenge - Infrastructure
 
 This directory contains the Infrastructure as Code (IaC) components for the Azure Resume Challenge using ARM templates
 
