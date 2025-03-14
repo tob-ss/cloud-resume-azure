@@ -7,6 +7,9 @@
         },
         "location": {
             "value": "ukwest"
+        },
+        "domainName": {
+            "value": "dev.myazurecloudcv.com"
         }
     }
 }

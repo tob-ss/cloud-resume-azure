@@ -68,6 +68,13 @@
                 "description": "Name of the CDN endpoint for development"
             }
         },
+        "createDnsZone": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "Whether to create a DNS Zone (should be true only for production)"
+            }
+        },
         "appInsightsName": {
             "type": "string",
             "defaultValue": "[concat('resume-insights-', parameters('environment'), '-', uniqueString(resourceGroup().id))]",
@@ -311,6 +318,7 @@
             }
         },
         {
+            "condition": "[parameters('createDnsZone')]",
             "type": "Microsoft.Network/dnsZones",
             "apiVersion": "2018-05-01",
             "name": "[parameters('domainName')]",
