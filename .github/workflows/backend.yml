@@ -134,7 +134,7 @@ jobs:
           app-name: ${{ steps.function-app.outputs.name }}
           package: backend
           respect-funcignore: true
-          scm-do-build-during-deployment: true
+          scm-do-build-during-deployment: false
           enable-oryx-build: true
 
       # Add the new step right here, after the deployment step
