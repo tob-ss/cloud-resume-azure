@@ -1,32 +1,28 @@
-name: Backend Deployment
+name: Backend Production Deployment
 
+# Triggers on pushes to master branch that change files in the backend directory
 on:
   push:
     branches:
-      - dev  # Auto-deploy to dev on develop branch changes
+      - master
     paths:
       - 'backend/**'
-  pull_request:
-    branches:
-      - master  # Run tests on PRs to main but don't deploy
-    paths:
-      - 'backend/**'
+  # Allow manual triggering for controlled production deployments
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment to deploy to'
+      confirm_deployment:
+        type: boolean
+        description: 'Confirm production deployment'
         required: true
-        default: 'dev'
-        type: choice
-        options:
-          - dev
-          - prd
+        default: false
 
 jobs:
   test:
+    name: Test Backend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
       
       - name: Setup Python
         uses: actions/setup-python@v2
@@ -39,19 +35,22 @@ jobs:
           pip install pytest pytest-mock
           pip install -r backend/requirements.txt
       
-      #- name: Run unit tests
-      #  run: |
-      #    cd backend
-      #    python -m pytest tests/ -v
+      # Ensure tests are enabled for production deployments
+      - name: Run unit tests
+        run: |
+          cd backend
+          python -m pytest tests/ -v
   
-  deploy:
+  deploy-prod:
+    name: Deploy to Production
     needs: test
-    if: success() && (github.ref == 'refs/heads/dev' || github.event_name == 'workflow_dispatch')
+    if: success() && (github.event_name == 'push' || github.event.inputs.confirm_deployment == 'true')
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'dev' }}
+    environment: prd  # This environment should have required approvals
     
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
       
       - name: Setup Python
         uses: actions/setup-python@v2
@@ -68,32 +67,25 @@ jobs:
           pip install --target=".python_packages/lib/site-packages" -r requirements.txt
           npm i -g azure-functions-core-tools@4 --unsafe-perm true
       
-      - name: Check Python packages directory
+      - name: Debug Python packages
+        if: ${{ github.event.inputs.debug_enabled == 'true' }}
         run: |
           cd backend
-          echo "Checking Python packages directory structure:"
+          echo "Python packages directory structure:"
           find .python_packages -type d | sort
-          echo "Listing .python_packages contents:"
+          echo "Python packages contents:"
           ls -la .python_packages/lib/site-packages/
-          echo "Looking for azure packages:"
+          echo "Azure packages:"
           find .python_packages -name "azure*" | sort
-
+      
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       
       - name: Set environment variables
-        id: env-vars
         run: |
-          if [[ "${{ github.event.inputs.environment }}" == "prd" || "${{ github.ref }}" == "refs/heads/master" ]]; then
-            echo "ENVIRONMENT=prd" >> $GITHUB_ENV
-            echo "RESOURCE_GROUP=azure-resume-prd-rg" >> $GITHUB_ENV
-          else
-            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
-            echo "RESOURCE_GROUP=azure-resume-dev-rg" >> $GITHUB_ENV
-          fi
-          echo "Deploying to ${{ env.ENVIRONMENT }} environment in ${{ env.RESOURCE_GROUP }}"
+          echo "RESOURCE_GROUP=azure-resume-prd-rg" >> $GITHUB_ENV
       
       - name: Get Function App Name
         id: function-app
@@ -137,7 +129,6 @@ jobs:
           scm-do-build-during-deployment: false
           enable-oryx-build: true
 
-      # Add the new step right here, after the deployment step
       - name: Deploy dependencies manually
         uses: azure/CLI@v1
         if: always()  # Run even if the previous step failed
@@ -198,7 +189,7 @@ jobs:
       - name: Deployment Summary
         run: |
           FUNCTION_URL="https://${{ steps.function-app.outputs.name }}.azurewebsites.net"
-          echo "Deployment to ${{ env.ENVIRONMENT }} environment completed successfully."
+          echo "Deployment to PRODUCTION environment completed successfully."
           echo "Function App URL: $FUNCTION_URL"
           echo "API endpoints:"
           echo "  - $FUNCTION_URL/api/GetResumeCounter"

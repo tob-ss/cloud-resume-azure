@@ -1,0 +1,75 @@
+name: Backend PR Validation
+
+# Triggers on pull requests to master branch that change files in the backend directory
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'backend/**'
+
+jobs:
+  validate:
+    name: Validate Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-mock
+          pip install -r backend/requirements.txt
+      
+      #- name: Run unit tests
+      #  run: |
+      #    cd backend
+      #    python -m pytest tests/ -v
+      
+      - name: Lint Python code
+        run: |
+          pip install flake8
+          flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
+      
+      - name: Check Azure Function configuration
+        run: |
+          echo "Validating function.json files"
+          for func_json in backend/*/function.json; do
+            if [ -f "$func_json" ]; then
+              # Simple JSON validation
+              cat "$func_json" | python -m json.tool > /dev/null || \
+                (echo "Invalid JSON in $func_json" && exit 1)
+              echo "✓ $func_json is valid"
+            fi
+          done
+          
+          echo "Validating host.json"
+          if [ -f "backend/host.json" ]; then
+            cat backend/host.json | python -m json.tool > /dev/null || \
+              (echo "Invalid JSON in host.json" && exit 1)
+            echo "✓ host.json is valid"
+          fi
+      
+      - name: Summarize PR validation
+        run: |
+          echo "Backend code validation successful!"
+          echo "The following changes will be deployed to production when merged:"
+          echo "--------------------------------------------------------"
+          git diff --name-status origin/master -- backend/ | grep -v "__pycache__" | while read status file; do
+            if [ "$status" == "A" ]; then
+              echo "➕ Added: $file"
+            elif [ "$status" == "M" ]; then
+              echo "✏️ Modified: $file"
+            elif [ "$status" == "D" ]; then
+              echo "🗑️ Deleted: $file"
+            else
+              echo "$status: $file"
+            fi
+          done
+          echo "--------------------------------------------------------"
