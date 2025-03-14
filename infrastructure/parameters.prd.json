@@ -7,6 +7,12 @@
         },
         "location": {
             "value": "ukwest"
+        },
+        "domainName": {
+            "value": "myazurecloudcv.com"
+        },
+        "createDnsZone": {
+            "value": true
         }
     }
 }

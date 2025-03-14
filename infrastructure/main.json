@@ -48,6 +48,12 @@
                 "description": "Name of the Cosmos DB account"
             }
         },
+        "domainName": {
+            "type": "string",
+            "metadata": {
+                "description": "Your custom domain name (e.g., example.com)"
+            }
+        },
         "cdnProfileName": {
             "type": "string",
             "defaultValue": "[concat('resume-cdn-', parameters('environment'), '-', uniqueString(resourceGroup().id))]",
@@ -57,9 +63,16 @@
         },
         "cdnEndpointName": {
             "type": "string",
-            "defaultValue": "[concat('resume-endpoint-', parameters('environment'), '-', uniqueString(resourceGroup().id))]",
+            "defaultValue": "[concat('resume-endpoint-', uniqueString(resourceGroup().id))]",
             "metadata": {
                 "description": "Name of the CDN endpoint"
+            }
+        },
+        "createDnsZone": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "Whether to create a DNS Zone (should be true only for production)"
             }
         },
         "appInsightsName": {
@@ -269,6 +282,7 @@
                         "allowedOrigins": [
                             "[concat('https://', parameters('storageAccountName'), '.z35.web.core.windows.net')]",
                             "[concat('https://', parameters('cdnEndpointName'), '.azureedge.net')]",
+                            "[concat('https://', parameters('domainName'))]",
                             "http://localhost:3000"
                         ]
                     }
@@ -303,6 +317,14 @@
                     }
                 }
             }
+        },
+        {
+            "condition": "[parameters('createDnsZone')]",
+            "type": "Microsoft.Network/dnsZones",
+            "apiVersion": "2018-05-01",
+            "name": "[parameters('domainName')]",
+            "location": "global",
+            "properties": {}
         },
         {
             "type": "Microsoft.Cdn/profiles",
@@ -345,6 +367,35 @@
                         }
                     }
                 ]
+            }
+        },
+        {
+            "condition": "[parameters('createDnsZone')]",
+            "type": "Microsoft.Network/dnsZones/A",
+            "apiVersion": "2018-05-01",
+            "name": "[concat(parameters('domainName'), '/', '@')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
+                "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]"
+            ],
+            "properties": {
+                "TTL": 3600,
+                "targetResource": {
+                    "id": "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]"
+                }
+            }
+        },
+        {
+            "condition": "[parameters('createDnsZone')]",
+            "type": "Microsoft.Cdn/profiles/endpoints/customDomains",
+            "apiVersion": "2020-09-01",
+            "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'), '/', replace(parameters('domainName'), '.', '-'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]",
+                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
+            ],
+            "properties": {
+                "hostName": "[parameters('domainName')]"
             }
         }
     ],
