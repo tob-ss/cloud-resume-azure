@@ -388,12 +388,45 @@
         },
         {
             "condition": "[parameters('createDnsZone')]",
+            "type": "Microsoft.Network/dnsZones/CNAME",
+            "apiVersion": "2018-05-01",
+            "name": "[concat(parameters('domainName'), '/www')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
+                "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]"
+            ],
+            "properties": {
+                "TTL": 3600,
+                "CNAMERecord": {
+                    "cname": "[concat(parameters('cdnEndpointName'), '.azureedge.net')]"
+                }
+            }
+        },
+        {
+            "condition": "[parameters('createDnsZone')]",
+            "type": "Microsoft.Network/dnsZones/CNAME",
+            "apiVersion": "2018-05-01",
+            "name": "[concat(parameters('domainName'), '/dev')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
+                "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]"
+            ],
+            "properties": {
+                "TTL": 3600,
+                "CNAMERecord": {
+                    "cname": "[concat(parameters('cdnEndpointName'), '.azureedge.net')]"
+                }
+            }
+        },
+        {
+            "condition": "[parameters('createDnsZone')]",
             "type": "Microsoft.Cdn/profiles/endpoints/customDomains",
             "apiVersion": "2020-09-01",
             "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'), '/', replace(parameters('domainName'), '.', '-'))]",
             "dependsOn": [
                 "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]",
-                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
+                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
+                "[resourceId('Microsoft.Network/dnsZones/A', parameters('domainName'), '@')]"
             ],
             "properties": {
                 "hostName": "[parameters('domainName')]"
@@ -406,7 +439,8 @@
             "name": "[concat(parameters('cdnProfileName'), '/', parameters('cdnEndpointName'), '/www-', replace(parameters('domainName'), '.', '-'))]",
             "dependsOn": [
                 "[resourceId('Microsoft.Cdn/profiles/endpoints', parameters('cdnProfileName'), parameters('cdnEndpointName'))]",
-                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
+                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
+                "[resourceId('Microsoft.Network/dnsZones/CNAME', parameters('domainName'), 'www')]"
             ],
             "properties": {
                 "hostName": "[concat('www.', parameters('domainName'))]"
